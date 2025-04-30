@@ -46,7 +46,15 @@ BOOL hookedWglSwapBuffers( HDC DeviceContext )
 
     if ( globals::menu_open )
     {
-
+        ImGui::Begin( "gurtware" );
+        ImGui::Text( "gurt: yo\nengine %llX\nexecutable %llX\ncgame %llX\ngame %llX\nwglSwapBuffers %llX", 
+            instances::engine,
+            instances::executable,
+            instances::game,
+            instances::cgame,
+            (uintptr_t)o__wglSwapBuffers
+        );
+        ImGui::End( );
     }
 
     ImGui::Render( );
