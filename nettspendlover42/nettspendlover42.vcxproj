@@ -42,11 +42,9 @@
     <ClInclude Include="include\imgui\imstb_rectpack.h" />
     <ClInclude Include="include\imgui\imstb_textedit.h" />
     <ClInclude Include="include\imgui\imstb_truetype.h" />
-    <ClInclude Include="include\instances.h" />
     <ClInclude Include="include\lazy.h" />
     <ClInclude Include="include\MinHook.h" />
     <ClInclude Include="include\offsets.h" />
-    <ClInclude Include="include\types.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

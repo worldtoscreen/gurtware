@@ -16,6 +16,15 @@
 
 #include "globals.h"
 #include "offsets.h"
-#include "instances.h"
+
+#include <stdio.h>
+#include <stdarg.h>
+
+void FormatToBuffer( char *buffer, size_t bufferSize, const char *fmt, ... ) {
+    va_list args;
+    va_start( args, fmt );
+    vsnprintf_s( buffer, bufferSize, _TRUNCATE, fmt, args );
+    va_end( args );
+}
 
 #pragma comment(lib, "opengl32.lib")

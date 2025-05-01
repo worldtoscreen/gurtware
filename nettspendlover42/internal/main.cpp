@@ -3,16 +3,6 @@
 typedef BOOL( *SB )( HDC );
 SB o__wglSwapBuffers = nullptr;
 
-bool GetWindowDimensions( __int32 &WindowWidth, __int32 &WindowHeight )
-{
-    if ( !instances::executable )
-        return false;
-
-    WindowWidth = *(__int32 *)( instances::executable + offsets::WindowWidth );
-    WindowHeight = *(__int32 *)( instances::executable + offsets::WindowHeight );
-    return true;
-}
-
 BOOL hookedWglSwapBuffers( HDC DeviceContext )
 {
     if ( globals::uninjecting ) return o__wglSwapBuffers( DeviceContext );
@@ -34,15 +24,36 @@ BOOL hookedWglSwapBuffers( HDC DeviceContext )
         return o__wglSwapBuffers( DeviceContext );
     }
 
-    ImGui::GetIO( ).WantCaptureKeyboard = true;
-    ImGui::GetIO( ).WantCaptureMouse = true;
-    ImGui::GetIO( ).MouseDrawCursor = true;
-    ImGui::GetIO( ).MouseDown[0] = GetAsyncKeyState( VK_LBUTTON );
-    ImGui::GetIO( ).MouseDown[1] = GetAsyncKeyState( VK_RBUTTON );
+    instances::read( );
+
+    ImGui::GetIO( ).WantCaptureKeyboard = globals::menu_open;
+    ImGui::GetIO( ).WantCaptureMouse = globals::menu_open;
+    ImGui::GetIO( ).MouseDrawCursor = globals::menu_open;
+    if ( globals::menu_open )
+    {
+        ImGui::GetIO( ).MouseDown[0] = GetAsyncKeyState( VK_LBUTTON );
+        ImGui::GetIO( ).MouseDown[1] = GetAsyncKeyState( VK_RBUTTON );
+    }
+
+    
 
     ImGui_ImplOpenGL3_NewFrame( );
     ImGui_ImplWin32_NewFrame( );
     ImGui::NewFrame( );
+
+    camera cam = { true };
+    if ( cam.valid )
+    {
+        vec2 projected;
+        if ( cam.Project( vec3(
+            1000.f,
+            200.f,
+            1000.f
+        ), projected ) )
+        {
+            ImGui::GetForegroundDrawList( )->AddLine( (cam.dimensions / 2.f).ToImVec2(), projected.ToImVec2( ), ImColor( 255, 255, 255, 255 ), 1.f );
+        }
+    }
 
     if ( globals::menu_open )
     {
@@ -54,13 +65,34 @@ BOOL hookedWglSwapBuffers( HDC DeviceContext )
             instances::cgame,
             (uintptr_t)o__wglSwapBuffers
         );
+
+        ImGui::Text( "Coords: { %f, %f, %f }\nRotation: { %f, %f, %f }\nFOV: %f\nWindow Size: { %f, %f }",
+            cam.coords.x,
+            cam.coords.y,
+            cam.coords.z,
+            cam.rotation.x,
+            cam.rotation.y,
+            cam.rotation.z,
+            cam.fov,
+            cam.dimensions.x,
+            cam.dimensions.y
+        );
+
+        if ( ImGui::Button( "Copy Rotation" ) )
+        {
+            char buf[128];
+            FormatToBuffer( buf, sizeof( buf ), "%f, %f, %f", cam.rotation.x, cam.rotation.y, cam.rotation.z );
+            ImGui::SetClipboardText( buf );
+        }
+
         ImGui::End( );
     }
+
 
     ImGui::Render( );
 
     __int32 g_Width, g_Height;
-    if ( GetWindowDimensions( g_Width, g_Height ) )
+    if ( instances::GetWindowDimensions( g_Width, g_Height ) )
     {
         glViewport( 0, 0, g_Width, g_Height );
     }
@@ -82,16 +114,24 @@ void MainThread( HMODULE LParam )
 
     MH_Initialize( );
 
-    if ( !instances::init() )
+    int tries = 0;
+    while ( !instances::init() )
     {
-        printf( "[-] failed to read module list" );
-        if ( Dummy ) fclose( Dummy );
-        FreeConsole( );
+        printf( "[-] failed to read module list...\n" );
+        tries++;
 
-        FreeLibraryAndExitThread( LParam, 0 );
+        if ( tries > 350 )
+        {
+            if ( Dummy ) fclose( Dummy );
+            FreeConsole( );
+
+            FreeLibraryAndExitThread( LParam, 0 );
+        }
+
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
     }
 
-    globals::game_hwnd = *(HWND *)( instances::engine + offsets::hwnd );
+    globals::game_hwnd = *(HWND *)( instances::engine + offsets::ui::hwnd );
     if ( !globals::game_hwnd )
     {
         printf( "[-] failed to read window hwnd" );
